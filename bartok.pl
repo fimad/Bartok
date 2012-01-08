@@ -6,6 +6,7 @@ use Bartok;
 use Bartok::Config;
 use Bartok::Megaupload;
 use Bartok::FilesTube;
+use Bartok::Curses;
 use Getopt::Long;
 use Proc::Daemon;
 use File::Copy;
@@ -27,6 +28,7 @@ my @_ADD = (); #will contain the url and optionally the file name
 my @_SEARCH = (); #contains the search query and the file and folder name
 my $_STATUS = 0; #print out the current status of the daemon
 my $_QUEUE = 0; #list the download queue
+my $_CURSES = 0; #should we launch the curses gui?
 
 GetOptions(
 #global
@@ -39,6 +41,7 @@ GetOptions(
   "find=s{1,3}" => \@_SEARCH,
   "status" => \$_STATUS,
   "queue" => \$_QUEUE,
+  "curses" => \$_CURSES
 );
 
 sub showUsageAndDie{
@@ -69,35 +72,23 @@ Bartok::register( Bartok::Megaupload::handle );
 # Client Code #
 ###############
 
-sub client_add{
-  my( $priority, $url, $file, $folder ) = @_;
-  my $entry = "$url";
-  if( $file ){
-    $entry = "$entry\t$file";
-    if( $folder ){
-      $entry = "$entry\t$folder";
-    }
-  }
-  open( QUEUE, ">>", Bartok::Config::queue_file() ) or die( "Cannot access the queue file.\n" );
-  sleep(1) while( not flock( QUEUE, LOCK_EX ) ); #lock the queue
-  print QUEUE "$priority\t$entry\n";
-  close( QUEUE );
-}
-
 if( not $_DAEMON ){
 
   if( not Bartok::Config::daemon_running() ){
     print STDERR "Warning: Daemon does not appear to be running.\n\n";
+    exit;
   }
 
-  if( @_ADD ){
+  if( $_CURSES ){
+    Bartok::Curses::run();
+  }elsif( @_ADD ){
 #    my $priority = $_HIGH;
 #    my $entry = join("\t", @_ADD);
 #    open( QUEUE, ">>", Bartok::Config::queue_file() ) or die( "Cannot access the queue file.\n" );
 #    sleep(1) while( not flock( QUEUE, LOCK_EX ) ); #lock the queue
 #    print QUEUE "$priority\t$entry\n";
 #    close( QUEUE );
-    client_add($_HIGH, @_ADD);
+    Bartok::client_add($_HIGH, @_ADD);
   }elsif( @_SEARCH ){
     while( 1 ){ #loop until the user says stop
       my @results = Bartok::search( $_SEARCH[0], 5 );

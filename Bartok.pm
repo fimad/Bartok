@@ -3,6 +3,7 @@ package Bartok;
 
 use strict;
 use Exporter;
+use Fcntl ':flock';
 
 our @EXPORT = ();
 
@@ -49,6 +50,22 @@ sub search{
   if( $Searcher ){
     return &$Searcher($query, $max );
   }
+}
+
+#add a url to the queue
+sub client_add{
+  my( $priority, $url, $file, $folder ) = @_;
+  my $entry = "$url";
+  if( $file ){
+    $entry = "$entry\t$file";
+    if( $folder ){
+      $entry = "$entry\t$folder";
+    }
+  }
+  open( QUEUE, ">>", Bartok::Config::queue_file() ) or die( "Cannot access the queue file.\n" );
+  sleep(1) while( not flock( QUEUE, LOCK_EX ) ); #lock the queue
+  print QUEUE "$priority\t$entry\n";
+  close( QUEUE );
 }
 
 1;
