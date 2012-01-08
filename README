@@ -1,0 +1,15 @@
+Bartok is a download manager for various filesharing sites (Megaupload,etc). It
+also supports searching link aggregator.
+
+Bartok is composed of two components. A daemon and a user front end.
+
+The daemon is launched by:
+
+bartok.pl -d
+
+Then adding a file to download is accomplished with:
+
+bartok.pl --add url
+
+Note: running bartok.pl with no arguments will give a more detailed explanation
+of parameters.
