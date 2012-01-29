@@ -21,6 +21,9 @@ sub can_download{
 our $megaupload_scraper = scraper{
 #  process 'div#downloadlink > a', 'link' => '@href';
   process 'a.download_regular_usual', 'link' => '@href';
+  process 'div.download_file_name', 'filename' => 'TEXT';
+  process 'div.description_bl', 'description' => 'TEXT';
+  process 'div.download_file_size', 'size' => 'TEXT';
 };
 
 sub download{
@@ -61,10 +64,24 @@ sub download{
   return 0;
 }
 
+sub info{
+  my( $url ) = @_;
+  my $result = $megaupload_scraper->scrape( URI->new($url) );
+  return 0 if( not exists $result->{'link'} ); #drop out if there is not link
+  my $desc = $result->{'description'};
+  $desc =~ s/^File description: //g;
+  $result->{'size'} =~ s/^ +| +$//g;
+  $result->{'filename'} =~ s/^ +| +$//g;
+  return {
+    description=>$desc,
+    size=>$result->{'size'},
+    filename=>$result->{'filename'},
+  };
+}
 
 #a short cut for having to write out the array of can_download and download
 sub handle{
-  return [\&can_download, \&download];
+  return {can_download=>\&can_download, download=>\&download, info=>\&info};
 }
 
 1;

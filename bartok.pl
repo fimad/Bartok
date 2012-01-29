@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use lib '/home/tapeside/src/bartok/';
+use lib '/home/will/Coding/bartok/';
 use Bartok;
 use Bartok::Config;
 use Bartok::Megaupload;
@@ -18,6 +18,7 @@ use Fcntl ':flock';
 
 #global options
 my $_CONFIG = "$ENV{'HOME'}/.bartok/bartok.cfg"; #where is our config file?
+ 
 
 #daemon options
 my $_DAEMON = 0; #run the daemon
@@ -58,6 +59,8 @@ sub showUsageAndDie{
        $0 --status
        $0 --queue
 
+       $0 --curses
+
 Note: --config file Can be supplied to use a configuration file other than the default of ~/.bartok/bartok.cfg
 ";
 }
@@ -65,7 +68,9 @@ Note: --config file Can be supplied to use a configuration file other than the d
 #Initialize Bartok
 Bartok::Config::load($_CONFIG);
 Bartok::set_searcher( Bartok::FilesTube::handle );
-Bartok::register( Bartok::Megaupload::handle );
+#Megaupload no longer exists :(
+#Bartok::register( Bartok::Megaupload::handle );
+Bartok::register( Bartok::Rapidshare::handle );
 
 
 ###############
@@ -76,7 +81,7 @@ if( not $_DAEMON ){
 
   if( not Bartok::Config::daemon_running() ){
     print STDERR "Warning: Daemon does not appear to be running.\n\n";
-    exit;
+  #  exit;
   }
 
   if( $_CURSES ){
@@ -88,7 +93,7 @@ if( not $_DAEMON ){
 #    sleep(1) while( not flock( QUEUE, LOCK_EX ) ); #lock the queue
 #    print QUEUE "$priority\t$entry\n";
 #    close( QUEUE );
-    Bartok::client_add($_HIGH, @_ADD);
+    Bartok::push_queue($_HIGH, @_ADD);
   }elsif( @_SEARCH ){
     while( 1 ){ #loop until the user says stop
       my @results = Bartok::search( $_SEARCH[0], 5 );
@@ -115,7 +120,7 @@ if( not $_DAEMON ){
           last;
         }elsif( $choice =~ m/^[0-9]+$/ ){
           my $result = $results[$choice-1];
-          client_add( $_HIGH, $result->{'url'}, $_SEARCH[1], $_SEARCH[2] );
+          Bartok::push_queue( $_HIGH, $result->{'url'}, $_SEARCH[1], $_SEARCH[2] );
           last;
         }
 
@@ -130,7 +135,7 @@ if( not $_DAEMON ){
     print <STATUS>;
     close( STATUS );
   }elsif( $_QUEUE ){
-    my @queue = Bartok::Config::read_queue();
+    my @queue = Bartok::read_queue();
     if( @queue ){
       my $number = 1;
       for my $item (@queue){
@@ -166,7 +171,7 @@ if( $_DAEMON ){
 
 #enter the download loop!
   while( 1 ){
-    my($entry) = Bartok::Config::read_queue;
+    my($entry) = Bartok::read_queue;
     if( $entry ){
       my( $priority, $url, $filename, $directory ) = @$entry;
       $filename = ($filename) ? $filename : 0;
@@ -192,7 +197,7 @@ if( $_DAEMON ){
         Bartok::Config::log("Unable to download '$url'.");
       }
 
-      Bartok::Config::pop_queue($entry);
+      Bartok::pop_queue($entry);
     }
 
     Bartok::Config::set_status("Idle");

@@ -80,61 +80,19 @@ sub daemon_running{
   return 0;
 }
 
-#checks whether queue has been updated
-sub check_queue{
-  return 1;
-}
-
-#returns a list of the entries in the queue sorted by priority and time added
-sub read_queue{
-  my @normal_queue; #holds normal priority entries
-  my @high_queue;
-  open( QUEUE, "<", queue_file() ) or die( "" );
-  my $line;
-  while(defined( $line=<QUEUE> )){
-    chomp $line;
-    if( $line =~ m/^1\t(.+)$/ ){
-      my @entry = split("\t", $line);
-      push @high_queue, \@entry;
-    }elsif( $line =~ m/^0\t(.+)$/ ){
-      my @entry = split("\t", $line);
-      push @normal_queue, \@entry;
-    }
-  }
-  close( QUEUE );
-  return (@high_queue, @normal_queue);
-}
-
-sub pop_queue{
-  my( $entryToRemove ) = @_;
-  my @queue = read_queue();
-
-#find the entry in the queue and remove it
-  my $index = 0;
-  while( $index <= $#queue ){
-    my $entry = $queue[$index];
-    if( $entry->[1] eq $entryToRemove->[1] and 
-      $entry->[2] eq $entryToRemove->[2] and 
-      $entry->[3] eq $entryToRemove->[3] ){
-      splice(@queue, $index, 1);
-      last;
-    }
-    $index++;
-  }
-
-  open( QUEUE, ">", $QUEUE_FILE ) or die log("Cannot access the queue");
-  sleep(1) while( not flock( QUEUE, LOCK_EX ) ); #lock the queue
-  for my $item (@queue){
-    print QUEUE join("\t", @$item), "\n";
-  }
-  close( QUEUE );
-}
-
 sub set_status{
   my( $status ) = @_;
   open( STATUS, ">", $STATUS_FILE ) or return;
   print STATUS "$status\n";
   close( STATUS );
+}
+
+sub get_status{
+  open( STATUS, "<", $STATUS_FILE ) or die( "" );
+  my $status=<STATUS>;
+  close( STATUS );
+  chomp $status;
+  return $status;
 }
 
 sub log{
